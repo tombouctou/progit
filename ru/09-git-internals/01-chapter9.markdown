@@ -1,26 +1,33 @@
 # Особенности реализации Git #
 
 You may have skipped to this chapter from a previous chapter, or you may have gotten here after reading the rest of the book — in either case, this is where you’ll go over the inner workings and implementation of Git. I found that learning this information was fundamentally important to understanding how useful and powerful Git is, but others have argued to me that it can be confusing and unnecessarily complex for beginners. Thus, I’ve made this discussion the last chapter in the book so you could read it early or later in your learning process. I leave it up to you to decide.
+
 Вы могли прочитать почти всю книгу перед тем, как приступить к этой главе, а могли только часть. Так или иначе, в данной главе рассматриваются внутренние процессы Git и особенности его реализации. На мой взгляд, изучение этих процессов довольно важно для понимания полезности и мощи Git, несмотря на то, насколько запутанным и неоправданно сложным оно может показаться новичку. Именно поэтому эта глава отнесена в конец, давая возможность заинтересованным освоить её раньше, а сомневающимся — позже.
 
 Now that you’re here, let’s get started. First, if it isn’t yet clear, Git is fundamentally a content-addressable filesystem with a VCS user interface written on top of it. You’ll learn more about what this means in a bit.
+
 Итак, приступим. Во-первых, напомню, что Git — контентно-адресуемая файловая система с интерфейсом системы управления версиями. Довольно скоро станет понятнее, что это значит.
 
 In the early days of Git (mostly pre 1.5), the user interface was much more complex because it emphasized this filesystem rather than a polished VCS. In the last few years, the UI has been refined until it’s as clean and easy to use as any system out there; but often, the stereotype lingers about the early Git UI that was complex and difficult to learn.
+
 На заре развития Git (примерно до версии 1.5), интерфейс был значительно сложнее, посколько был более похож на интерфейс доступа к файловой системе, нежели к системе управления версиями. За последние годы, интерфейс значительно улучшился и по удобству не уступает аналогам; некоторые, тем не менее, до сих пор считают, что интерфейс у Git был чересчур сложным, в т.ч. и для обучения.
 
 The content-addressable filesystem layer is amazingly cool, so I’ll cover that first in this chapter; then, you’ll learn about the transport mechanisms and the repository maintenance tasks that you may eventually have to deal with.
+
 Контентно-адресуемая файловая система — основа Git, очень интересна, именно её мы рассмотрим в начале данной главы; далее будут рассмотрены транспортные механизмы и инструменты обслуживания репозитория, с которыми так или иначе придется столкнуться.
 
 ## Сантехника и фарфор ##
 
 This book covers how to use Git with 30 or so verbs such as `checkout`, `branch`, `remote`, and so on. But because Git was initially a toolkit for a VCS rather than a full user-friendly VCS, it has a bunch of verbs that do low-level work and were designed to be chained together UNIX style or called from scripts. These commands are generally referred to as "plumbing" commands, and the more user-friendly commands are called "porcelain" commands.
+
 В основной части этой книги описано примерно три десятка команд, например, `checkout`, `branch`, `remote` и т.п. Но т.к. Git в начале развития был простой системой управления версиями для непростых пользователей, хакеров, существуют и другие команды, выполняющие низкоуровневые операции, т.н. "сантехнические" команды.
 
 The book’s first eight chapters deal almost exclusively with porcelain commands. But in this chapter, you’ll be dealing mostly with the lower-level plumbing commands, because they give you access to the inner workings of Git and help demonstrate how and why Git does what it does. These commands aren’t meant to be used manually on the command line, but rather to be used as building blocks for new tools and custom scripts.
+
 Рассмотренные ранее (в первых восьми главах) команды, в отличие от "сантехнических", именуются "фарфоровыми". В данной главе же рассматриваются именно низкоуровневые команды, дающие контроль над внутренними процессами Git и показывающие, как работает Git и почему он работает так, а не иначе. Предполагается, что данные команды не будут использоваться напрямую из командной строки, а будут служить в качестве строительных блоков для новых команд или сценариев.
 
 When you run `git init` in a new or existing directory, Git creates the `.git` directory, which is where almost everything that Git stores and manipulates is located. If you want to back up or clone your repository, copying this single directory elsewhere gives you nearly everything you need. This entire chapter basically deals with the stuff in this directory. Here’s what it looks like:
+
 Когда вы выполняете `git init` в новом или существовавшем ранее каталоге, Git создаёт подкаталог `.git`, в котором располагается почти всё, чем заправляет Git. Если требуется выполнить резервное копирование или клонирования репозитория, почти всегда достаточно скопировать данный подкаталог. И в данной главе, в основном, работа ведётся над его содержимым. Вот как он выглядит:
 
 	$ ls 
@@ -39,10 +46,15 @@ You may see some other files in there, but this is a fresh `git init` repository
 
 This leaves four important entries: the `HEAD` and `index` files and the `objects` and `refs` directories. These are the core parts of Git. The `objects` directory stores all the content for your database, the `refs` directory stores pointers into commit objects in that data (branches), the `HEAD` file points to the branch you currently have checked out, and the `index` file is where Git stores your staging area information. You’ll now look at each of these sections in detail to see how Git operates.
 
+Итак, осталось четыре важных записи: файлы `HEAD`, `index` и каталоги `objects`, `refs`. Это ключевые элементы хранилища Git. В каталоге `objects` находится, собственно, база данных, в `refs` -- ссылки на элементы базы (ветки), файл `HEAD` указывает на текущую ветку, в файле `index` хранится индекс. В последующих секциях данные элементы будут рассмотрены более подробно.
+
 ## Объекты Git ##
 
 Git is a content-addressable filesystem. Great. What does that mean?
 It means that at the core of Git is a simple key-value data store. You can insert any kind of content into it, and it will give you back a key that you can use to retrieve the content again at any time. To demonstrate, you can use the plumbing command `hash-object`, which takes some data, stores it in your `.git` directory, and gives you back the key the data is stored as. First, you initialize a new Git repository and verify that there is nothing in the `objects` directory:
+
+Git -- контентно-адресуемая файловая система. Но что это означает?
+А означает это, что извнутри Git -- простое хранилище ключ-значение. Можно добавить любой объект, в ответ будет выдан ключ, по которому этот объект можно извлечь. Для примера, можно воспользоваться "сантехнической" командой `hash-object`, которая добавляет данные в каталог `.git` и возвращает ключ. Сперва необходимо создать репозиторий и убедиться, что каталог `objects` пуст:
 
 	$ mkdir test
 	$ cd test
