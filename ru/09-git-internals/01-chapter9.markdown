@@ -143,7 +143,7 @@ But remembering the SHA-1 key for each version of your file isn’t practical; p
 
 The next type you’ll look at is the tree object, which solves the problem of storing the filename and also allows you to store a group of files together. Git stores content in a manner similar to a UNIX filesystem, but a bit simplified. All the content is stored as tree and blob objects, with trees corresponding to UNIX directory entries and blobs corresponding more or less to inodes or file contents. A single tree object contains one or more tree entries, each of which contains a SHA-1 pointer to a blob or subtree with its associated mode, type, and filename. For example, the most recent tree in the simplegit project may look something like this:
 
-Рассмотрим другой тип объектов Git — деревья, решающие проблему хранения имён файлов и совместного хранения файлов. Данные в Git хранятся подобно тому, как это сделано в файловых системах UNIX, но в упрощённом виде. Содержимое хранится в объектах-деревьях и блобах, деревья соответствуют записям каталогов в ФС, а хеш и блоб — inode и содержимому файла. Объект-дерево может содержать одну и более записей, каждая из которых представляет собой кортеж из хеша SHA-1, соответствующего блобу или поддереву, режима доступа к файлу, типа и имени. Например, в проекте simplegit дерево на момент написания выглядит так:
+Рассмотрим другой тип объектов Git — деревья, решающие проблему хранения имён файлов и совместного хранения файлов. Система хранения данных Git подобна файловым системам UNIX, в упрощённом виде. Содержимое хранится в объектах-деревьях и блобах, дерево соответствует записи каталога в ФС, а хеш и блоб — inode и содержимому файла. Объект-дерево может содержать одну и более записей, каждая из которых представляет собой кортеж из хеша SHA-1, соответствующего блобу или поддереву, режима доступа к файлу, типа и имени. Например, в проекте simplegit дерево на момент написания выглядит так:
 
 	$ git cat-file -p master^{tree}
 	100644 blob a906cb2a4a904a152e80877d4088654daad0c859      README
@@ -152,7 +152,7 @@ The next type you’ll look at is the tree object, which solves the problem of s
 
 The `master^{tree}` syntax specifies the tree object that is pointed to by the last commit on your `master` branch. Notice that the `lib` subdirectory isn’t a blob but a pointer to another tree:
 
-Запись `master^{tree}` означает, объект-дерево, соответствующий последнему коммиту ветки `master`. Заметьте, что подкаталог — не блоб, а указатель на другое поддерево:
+Запись `master^{tree}` означает "объект-дерево, соответствующий последнему коммиту ветки `master`". Заметьте, что подкаталог — не блоб, а указатель на другое поддерево:
 
 	$ git cat-file -p 99f1a6d12cb4b6f19c8655fca46c3ecf317074e0
 	100644 blob 47c6340d6459e05787f644c2447d2595f5d3a54b      simplegit.rb
@@ -193,7 +193,7 @@ You can also verify that this is a tree object:
 
 You’ll now create a new tree with the second version of test.txt and a new file as well:
 
-Создадим теперь новое дерево со второй версией файла test-txt и ещё одним файлом:
+Создадим новое дерево со второй версией файла test-txt и ещё одним файлом:
 
 	$ echo 'new file' > new.txt
 	$ git update-index test.txt 
@@ -232,12 +232,18 @@ Insert 18333fig0902.png
 
 You have three trees that specify the different snapshots of your project that you want to track, but the earlier problem remains: you must remember all three SHA-1 values in order to recall the snapshots. You also don’t have any information about who saved the snapshots, when they were saved, or why they were saved. This is the basic information that the commit object stores for you.
 
+У вас есть три дерева, соответствующих разным состояниям проекта, но предыдущая проблема, необходимость запоминать все три значения SHA-1, ещё не решена. Также нет информации о том, кто, когда и зачем выполнял фиксацию. Это основная информация, которая должна сохраняться в коммит-объекте.
+
 To create a commit object, you call `commit-tree` and specify a single tree SHA-1 and which commit objects, if any, directly preceded it. Start with the first tree you wrote:
+
+Для создания коммит-объекта необходимо вызвать `commit-tree` и задать SHA-1 и, если необходимо, предыдущие коммит-объекты. Для начала создадим объект для самого первого дерева:
 
 	$ echo 'first commit' | git commit-tree d8329f
 	fdf4fc3344e67ab068f836878b6c4951e3b15f3d
 
 Now you can look at your new commit object with `cat-file`:
+
+Просмотреть вновь созданный коммит-объект можно командой `cat-file`:
 
 	$ git cat-file -p fdf4fc3
 	tree d8329fc1cc938780ffdd9f94e0d364e0ea74f579
@@ -248,7 +254,11 @@ Now you can look at your new commit object with `cat-file`:
 
 The format for a commit object is simple: it specifies the top-level tree for the snapshot of the project at that point; the author/committer information pulled from your `user.name` and `user.email` configuration settings, with the current timestamp; a blank line, and then the commit message.
 
+Формат коммит-объекта прост: он отмечает дерево верхнего уровня, соответствующее выбранному состоянию проекта на некоторый момент, имя автора и коммитера из полей конфигурации `user.name`, `user.email`, временную метку, перевод строки и описание коммита.
+
 Next, you’ll write the other two commit objects, each referencing the commit that came directly before it:
+
+Далее, создадим ещё два коммит-объекта, каждый из которых ссылается на предыдущий:
 
 	$ echo 'second commit' | git commit-tree 0155eb -p fdf4fc3
 	cac0cab538b970a37ea1e769cbbde608743bc96d
@@ -256,6 +266,8 @@ Next, you’ll write the other two commit objects, each referencing the commit t
 	1a410efbd13591db07496601ebc7a059dd55cfe9
 
 Each of the three commit objects points to one of the three snapshot trees you created. Oddly enough, you have a real Git history now that you can view with the `git log` command, if you run it on the last commit SHA-1:
+
+Каждый из трёх коммит-объектов отмечает одно из состояний проекта. Теперь у нас есть полноценная история Git, которую можно посмотреть командой `git log`, указав хеш последнего коммита:
 
 	$ git log --stat 1a410e
 	commit 1a410efbd13591db07496601ebc7a059dd55cfe9
@@ -288,6 +300,8 @@ Each of the three commit objects points to one of the three snapshot trees you c
 
 Amazing. You’ve just done the low-level operations to build up a Git history without using any of the front ends. This is essentially what Git does when you run the `git add` and `git commit` commands — it stores blobs for the files that have changed, updates the index, writes out trees, and writes commit objects that reference the top-level trees and the commits that came immediately before them. These three main Git objects — the blob, the tree, and the commit — are initially stored as separate files in your `.git/objects` directory. Here are all the objects in the example directory now, commented with what they store:
 
+Отлично. Мы только что выполнили низкоуровевые операции для построения истории без использования высокоуровневых интерфейсов. По существу, именно это делает Git, когда выполняются команды `git add` или `git commit` — сохраняет блобы для изменённых файлов, обновляет индекс, записывает объекты-деревья и коммит-объекты, ссылающиеся на объекты-деревья верхнего уровня и предшествующие коммиты.
+
 	$ find .git/objects -type f
 	.git/objects/01/55eb4229851634a0f03eb265b69f5a2d56f341 # tree 2
 	.git/objects/1a/410efbd13591db07496601ebc7a059dd55cfe9 # commit 3
@@ -300,14 +314,16 @@ Amazing. You’ve just done the low-level operations to build up a Git history w
 	.git/objects/fa/49b077972391ad58037050f2a75f74e3671e92 # new.txt
 	.git/objects/fd/f4fc3344e67ab068f836878b6c4951e3b15f3d # commit 1
 
-If you follow all the internal pointers, you get an object graph something like рисунок 9-3.
+Если перейти по всем внутренним ссылкам, получится дерево, примерно как на рисунке 9-3.
 
 Insert 18333fig0903.png 
-Рисунок 9-3. All the objects in your Git directory.
+Рисунок 9-3. Все объекты в репозитории Git.
 
 ### Хранение объектов ###
 
 I mentioned earlier that a header is stored with the content. Let’s take a minute to look at how Git stores its objects. You’ll see how to store a blob object — in this case, the string "what is up, doc?" — interactively in the Ruby scripting language. You can start up interactive Ruby mode with the `irb` command:
+
+Ранее я упоминал, что заголовок сохраняется вместе с содержимым. Давайте посмотрим, как сохраняются объекты Git на диске. Мы рассмотрим сохранение блоб-объекта, в в данном случае это будет строка "Есть проблемы, шеф?". Пример будет выполнен на языке Ruby. Для запуска интерактивного интерпретатора воспользуйтесь командой `irb`:
 
 	$ irb
 	>> content = "Есть проблемы, шеф?"
@@ -315,10 +331,14 @@ I mentioned earlier that a header is stored with the content. Let’s take a min
 
 Git constructs a header that starts with the type of the object, in this case a blob. Then, it adds a space followed by the size of the content and finally a null byte:
 
+Git создаёт заголовок, начинающийся с типа объекта, в данном случае это блоб. Далее добавляется пробел, размер содержимого и нулевой байт:
+
 	>> header = "blob #{content.length}\0"
 	=> "blob 34\000"
 
 Git concatenates the header and the original content and then calculates the SHA-1 checksum of that new content. You can calculate the SHA-1 value of a string in Ruby by including the SHA1 digest library with the `require` command and then calling `Digest::SHA1.hexdigest()` with the string:
+
+Git склеивает заголовок и содержимое и вычисляет хеш SHA-1 полученного результата. Значение SHA1 для строки можно получить, подключив соответствующую библиотеку командой `require` и далее воспользовавшись вызовом `Digest::SHA1.hexdigest()`:
 
 	>> store = header + content
 	=> "blob 34\000\320\225\321\201\321\202\321\214 \320\277\321\200\320\276\320\261\320\273\320\265\320\274\321\213, \321\210\320\265\321\204?"
@@ -329,12 +349,16 @@ Git concatenates the header and the original content and then calculates the SHA
 
 Git compresses the new content with zlib, which you can do in Ruby with the zlib library. First, you need to require the library and then run `Zlib::Deflate.deflate()` on the content:
 
+Git сжимает полученный результат при помощи zlib, что решается в Ruby соответствующей библиотекой. Сперва, необходимо подключить её, после вызвать `Zlib::Deflate.deflate()` со строкой store в качестве параметра:
+
 	>> require 'zlib'
 	=> true
 	>> zlib_content = Zlib::Deflate.deflate(store)
 	=> "x\234\001*\000\325\377blob 34\000\320\225\321\201\321\202\321\214 \320\277\321\200\320\276\320\261\320\273\320\265\320\274\321\213, \321\210\320\265\321\204?\3453\030S"
 
 Finally, you’ll write your zlib-deflated content to an object on disk. You’ll determine the path of the object you want to write out (the first two characters of the SHA-1 value being the subdirectory name, and the last 38 characters being the filename within that directory). In Ruby, you can use the `FileUtils.mkdir_p()` function to create the subdirectory if it doesn’t exist. Then, open the file with `File.open()` and write out the previously zlib-compressed content to the file with a `write()` call on the resulting file handle:
+
+После этого, запишем сжатую строку на диск. Определим путь к файлу, который будет записан (первые два символа хеша в качестве названия подкаталога, оставшиеся 38 — в качестве имени). В Ruby для этого можно использовать функцию `FileUtils.mkdir_p` для создания подкаталога, если он не существует. Далее, откроем файл вызовом `File.open` и запишем данные вызовом `write`:
 
 	>> path = '.git/objects/' + sha1[0,2] + '/' + sha1[2,38]
 	=> ".git/objects/d8/a734f44240bdf766c8df342664fde23d421d64"
@@ -346,6 +370,8 @@ Finally, you’ll write your zlib-deflated content to an object on disk. You’l
 	=> 32
 
 That’s it — you’ve created a valid Git blob object. All Git objects are stored the same way, just with different types — instead of the string blob, the header will begin with commit or tree. Also, although the blob content can be nearly anything, the commit and tree content are very specifically formatted.
+
+Вот и всё, мы создали корректный объект Git. Все другие объекты создаются аналогично, меняется только тип (blob, commit, tree). Формат объектов-деревьев и коммит-объектов задаётся более строго, нежели блоб, который может содержать что угодно.
 
 ## Ссылки в Git ##
 
