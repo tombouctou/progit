@@ -377,7 +377,11 @@ That’s it — you’ve created a valid Git blob object. All Git objects are st
 
 You can run something like `git log 1a410e` to look through your whole history, but you still have to remember that `1a410e` is the last commit in order to walk that history to find all those objects. You need a file in which you can store the SHA-1 value under a simple name so you can use that pointer rather than the raw SHA-1 value.
 
+Для просмотра всей истории можно выполнить команду вроде `git log 1a410e`, но, опять же, требуется помнить, что именно `1a410e` коммит является последним. Необходим файл-указатель, который бы содержал это значение хеша SHA-1, чтобы можно было пользоваться им вместо хеша.
+
 In Git, these are called "references" or "refs"; you can find the files that contain the SHA-1 values in the `.git/refs` directory. In the current project, this directory contains no files, but it does contain a simple structure:
+
+В Git такие файлы называются ссылками ("refs"), они располагаются в каталоге `.git/refs`. В нашем проекте там пока пусто, но уже существует некоторая структура каталогов:
 
 	$ find .git/refs
 	.git/refs
@@ -388,9 +392,13 @@ In Git, these are called "references" or "refs"; you can find the files that con
 
 To create a new reference that will help you remember where your latest commit is, you can technically do something as simple as this:
 
+Чтобы создать новую ссылку, по сути, необходимо выполнить следующее действие:
+
 	$ echo "1a410efbd13591db07496601ebc7a059dd55cfe9" > .git/refs/heads/master
 
 Now, you can use the head reference you just created instead of the SHA-1 value in your Git commands:
+
+Теперь можно использовать ссылку head вместо хеша в командах Git:
 
 	$ git log --pretty=oneline  master
 	1a410efbd13591db07496601ebc7a059dd55cfe9 third commit
@@ -399,13 +407,19 @@ Now, you can use the head reference you just created instead of the SHA-1 value 
 
 You aren’t encouraged to directly edit the reference files. Git provides a safer command to do this if you want to update a reference called `update-ref`:
 
+Тем не менее, редактировать данные файлы напрямую не рекомендуется. Git предоставляет безопасную команду `update-ref` для изменения ссылки:
+
 	$ git update-ref refs/heads/master 1a410efbd13591db07496601ebc7a059dd55cfe9
 
 That’s basically what a branch in Git is: a simple pointer or reference to the head of a line of work. To create a branch back at the second commit, you can do this:
 
+Вот что такое, по сути ветка в Git -- ссылка на последнюю версию в работе. Для создания ветки, соответствующей состоянию второго коммита, можно выполнить следующее:
+
 	$ git update-ref refs/heads/test cac0ca
 
 Your branch will contain only work from that commit down:
+
+Данная ветка содержит только коммиты, предшествующие выбранному:
 
 	$ git log --pretty=oneline test
 	cac0cab538b970a37ea1e769cbbde608743bc96d second commit
@@ -413,31 +427,47 @@ Your branch will contain only work from that commit down:
 
 Now, your Git database conceptually looks something like Figure 9-4.
 
+Теперь база данных Git выглядит примерно так (см. рис. 9.4):
+
 Insert 18333fig0904.png 
-Figure 9-4. Git directory objects with branch head references included.
+Figure 9-4. Объекты каталоги Git с включенными привязками веток.
 
 When you run commands like `git branch (branchname)`, Git basically runs that `update-ref` command to add the SHA-1 of the last commit of the branch you’re on into whatever new reference you want to create.
 
+Когда выполняется команда `git branch (ветка)`, Git выполняет `update-ref` для создасоздания на последний добавленый коммит под выбранным именем.
+
 ### The HEAD ###
 
+### Файл HEAD ###
+
 The question now is, when you run `git branch (branchname)`, how does Git know the SHA-1 of the last commit? The answer is the HEAD file. The HEAD file is a symbolic reference to the branch you’re currently on. By symbolic reference, I mean that unlike a normal reference, it doesn’t generally contain a SHA-1 value but rather a pointer to another reference. If you look at the file, you’ll normally see something like this:
+
+Вопрос в том, как же Git получает хеш последнего коммита при выполнении `git branch (ветка)`? Ответ содержится в файле HEAD. Данный файл является символической ссылкой на текущую ветку. Символическая ссылка отличается от обычной тем, что непосредственно не содержит хеш SHA-1, а лишь ссылается на него. В текстовом виде это выглядит так:
 
 	$ cat .git/HEAD 
 	ref: refs/heads/master
 
 If you run `git checkout test`, Git updates the file to look like this:
 
+Если выполнить `git checkout test`, то содержимое файла изменится:
+
 	$ cat .git/HEAD 
 	ref: refs/heads/test
 
 When you run `git commit`, it creates the commit object, specifying the parent of that commit object to be whatever SHA-1 value the reference in HEAD points to.
 
+При выполнении `git commit`, создаётся коммит-объект, определяющий, что родителем его является тот объект, хеш которого содержится в файле, на который ссылается HEAD.
+
 You can also manually edit this file, but again a safer command exists to do so: `symbolic-ref`. You can read the value of your HEAD via this command:
+
+Данный файл, конечно, можно редактировать вручную, но безопаснее использовать команду `symbolic-ref`. Получить значение HEAD данной командой можно так:
 
 	$ git symbolic-ref HEAD
 	refs/heads/master
 
 You can also set the value of HEAD:
+
+Изменить значение HEAD можно так:
 
 	$ git symbolic-ref HEAD refs/heads/test
 	$ cat .git/HEAD 
@@ -445,10 +475,12 @@ You can also set the value of HEAD:
 
 You can’t set a symbolic reference outside of the refs style:
 
+Символическую ссылку на файл вне refs поставить нельзя:
+
 	$ git symbolic-ref HEAD test
 	fatal: Refusing to point HEAD outside of refs/
 
-### Tags ###
+### Метки ###
 
 You’ve just gone over Git’s three main object types, but there is a fourth. The tag object is very much like a commit object — it contains a tagger, a date, a message, and a pointer. The main difference is that a tag object points to a commit rather than a tree. It’s like a branch reference, but it never moves — it always points to the same commit but gives it a friendlier name.
 
