@@ -211,7 +211,7 @@ Your staging area now has the new version of test.txt as well as the new file ne
 
 Notice that this tree has both file entries and also that the test.txt SHA is the "version 2" SHA from earlier (`1f7a7a`). Just for fun, you’ll add the first tree as a subdirectory into this one. You can read trees into your staging area by calling `read-tree`. In this case, you can read an existing tree into your staging area as a subtree by using the `--prefix` option to `read-tree`:
 
-Заметьте, в данном дереве есть записи обоих файлов, а хеш второй версии файла отличается от ранней (`1f7a7a`). Для интереса, добавим первое дерево как поддерево текущего. Подключить дерево к индексу можно командой `read-tree`. Это можно сделать подключив его как поддерево, задав префикс опцией `--prefix`:
+Заметьте, в данном дереве есть записи обоих файлов, а хеш второй версии файла отличается от ранней (`1f7a7a`). Для интереса, добавим первое дерево как поддерево текущего. Подключить дерево к индексу можно командой `read-tree`. Это можно сделать, задав префикс опцией `--prefix`:
 
 	$ git read-tree --prefix=bak d8329fc1cc938780ffdd9f94e0d364e0ea74f579
 	$ git write-tree
@@ -701,20 +701,29 @@ The really nice thing about this is that it can be repacked at any time. Git wil
 
 ## The Refspec ##
 
+## Refspec ##
+
 Throughout this book, you’ve used simple mappings from remote branches to local references; but they can be more complex.
 Suppose you add a remote like this:
+
+Во всей книге использовались простые связи между ветками в удалённых репозиториях и локальными ветками, но они могут быть и более сложными.
+Предположим, мы добавили следующую удалённую ветку:
 
 	$ git remote add origin git@github.com:schacon/simplegit-progit.git
 
 It adds a section to your `.git/config` file, specifying the name of the remote (`origin`), the URL of the remote repository, and the refspec for fetching:
 
+Данный вызов добавляет секцию в файл `.git/config`, определяющую имя удалённого репозитория (`origin`), адрес и refspec:
+
 	[remote "origin"]
 	       url = git@github.com:schacon/simplegit-progit.git
 	       fetch = +refs/heads/*:refs/remotes/origin/*
 
-The format of the refspec is an optional `+`, followed by `<src>:<dst>`, where `<src>` is the pattern for references on the remote side and `<dst>` is where those references will be written locally. The `+` tells Git to update the reference even if it isn’t a fast-forward.
+Формат refspec следующий: опциональный `+`, далее пара `<src>:<dst>`, где `<src>` — шаблон ссылок в удалённом репозитории, а `<dst>` — соответствующий шаблон локальных ссылок. Символ `+` сообщает Git, что обновление необходимо выполнять даже в том случае, если оно не fast-forward.
 
 In the default case that is automatically written by a `git remote add` command, Git fetches all the references under `refs/heads/` on the server and writes them to `refs/remotes/origin/` locally. So, if there is a `master` branch on the server, you can access the log of that branch locally via
+
+В случае настроек по умолчанию, которые задаются при вызове `git remote add`, Git выбирает все ссылки из `refs/heads/` на стороне сервера, и записывает их в каталог `refs/remotes/origin/`. Поэтому, если на сервере есть ветка `master`, журнал данной ветки можно получить, вызвав:
 
 	$ git log origin/master
 	$ git log remotes/origin/master
@@ -722,15 +731,23 @@ In the default case that is automatically written by a `git remote add` command,
 
 They’re all equivalent, because Git expands each of them to `refs/remotes/origin/master`.
 
+Данные команды эквивалентны, любая запись разворачивается до `refs/remotes/origin/master`.
+
 If you want Git instead to pull down only the `master` branch each time, and not every other branch on the remote server, you can change the fetch line to
+
+Если хочется, чтобы Git забирал при обновлении только ветку `master`, а не все возможные, можно изменить соответствующую строку в конфигурации:
 
 	fetch = +refs/heads/master:refs/remotes/origin/master
 
 This is just the default refspec for `git fetch` for that remote. If you want to do something one time, you can specify the refspec on the command line, too. To pull the `master` branch on the remote down to `origin/mymaster` locally, you can run
 
+Данный refspec выбирается по умолчанию при вызове `git fetch` для данного удалённого репозитория. Если хочется выполнить единоразовое действие, можно задать refspec в командной строке. Например, чтобы забрать ветку `master` из удалённого репозитория в локальную `origin/mymaster`, можно выполнить
+
 	$ git fetch origin master:refs/remotes/origin/mymaster
 
 You can also specify multiple refspecs. On the command line, you can pull down several branches like so:
+
+Конечно, можно задать несколько refspec. Забрать несколько веток из командной строки можно так:
 
 	$ git fetch origin master:refs/remotes/origin/mymaster \
 	   topic:refs/remotes/origin/topic
@@ -779,7 +796,11 @@ Again, this will cause a `git push origin` to push the local `master` branch to 
 
 ### Deleting References ###
 
+### Удаление ссылок ###
+
 You can also use the refspec to delete references from the remote server by running something like this:
+
+Т.к. refspec является `<src>:<dst>`, опускание `<src>` означает, что тематическая ветка
 
 	$ git push origin :topic
 
