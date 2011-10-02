@@ -434,7 +434,7 @@ Figure 9-4. Объекты каталоги Git с включенными при
 
 When you run commands like `git branch (branchname)`, Git basically runs that `update-ref` command to add the SHA-1 of the last commit of the branch you’re on into whatever new reference you want to create.
 
-Когда выполняется команда `git branch (ветка)`, Git выполняет `update-ref` для создасоздания на последний добавленый коммит под выбранным именем.
+Когда выполняется команда `git branch (ветка)`, Git выполняет `update-ref` для добавления хеша последнего коммита текущей ветки под выбранным именем в виде новой ссылки.
 
 ### The HEAD ###
 
